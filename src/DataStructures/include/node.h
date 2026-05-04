@@ -1,20 +1,33 @@
 #ifndef NODE
 #define NODE
-#include "NodeProblem.h"
 #include "datapoint.h"
-#include <memory>
-using NodeId = char;
+#include "node.fwd.h"
 struct Threshold {
   FeatureId featureId;
   FeatureValue threshold_value;
 };
-struct Node {
-  std::shared_ptr<Node> left, right;
+struct LeafData {
   Classification classification;
-  NodeId node_id;
-  Threshold threshold;
-  NodeProblem node_problem;
-  bool is_leaf() const { return left == nullptr && right == nullptr; }
+  LeafData(Classification classification) : classification(classification) {};
 };
-using NodePtr = std::shared_ptr<Node>;
+
+struct DecisionData {
+  Threshold threshold;
+  NodePtr left, right;
+  DecisionData(Threshold threshold, NodePtr left, NodePtr right)
+      : threshold(threshold), left(std::move(left)), right(std::move(right)) {};
+};
+struct Node {
+  Node(NodeId node_id, Datapoints datapoints, Classification classification)
+      : node_id(node_id), datapoints(datapoints),
+        data(LeafData(classification)) {}
+  Node(NodeId node_id, Datapoints datapoints, Threshold threshold, NodePtr left,
+       NodePtr right)
+      : node_id(node_id), datapoints(datapoints),
+        data(DecisionData(threshold, left, right)) {}
+  std::variant<LeafData, DecisionData> data;
+  NodeId node_id;
+  Datapoints datapoints;
+  bool is_leaf() const { return std::holds_alternative<LeafData>(data); }
+};
 #endif

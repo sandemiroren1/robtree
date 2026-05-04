@@ -9,6 +9,9 @@ SimpleScheduler::SimpleScheduler(NodePtr tree) : Scheduler(tree) {
   this->schedule = schedule;
   this->index_of_next_node_in_schedule = 0;
 }
+bool SimpleScheduler::all_nodes_expanded() const {
+  return this->index_of_next_node_in_schedule >= this->schedule.size();
+}
 NodePtr SimpleScheduler::get_next_node() const {
   assert(this->index_of_next_node_in_schedule < this->schedule.size());
   auto &node_to_return = this->schedule[this->index_of_next_node_in_schedule];
@@ -40,7 +43,8 @@ void SimpleScheduler::dfs(NodePtr tree, NodePtrList &schedule) {
   if (tree->is_leaf()) {
     return;
   }
-  assert(tree->left != nullptr && tree->right != nullptr);
-  dfs(tree->left, schedule);
-  dfs(tree->right, schedule);
+  auto &decision = std::get<DecisionData>(tree->data);
+  assert(decision.left != nullptr && decision.right != nullptr);
+  dfs(decision.left, schedule);
+  dfs(decision.right, schedule);
 }

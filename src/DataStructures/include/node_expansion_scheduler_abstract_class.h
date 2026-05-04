@@ -4,10 +4,11 @@
 class Scheduler {
 
 public:
-  Scheduler(NodePtr tree);
-  virtual bool all_nodes_expanded() const;
-  virtual NodePtr get_next_node() const;
-  virtual void set_expanded(NodeId node_id, bool expansion_status);
-  virtual bool get_expanded(NodeId node_id) const;
+  Scheduler(NodePtr) {}
+  virtual bool all_nodes_expanded() const = 0;
+  virtual NodePtr get_next_node() const = 0;
+  virtual void set_expanded(NodeId node_id, bool expansion_status) = 0;
+  virtual bool get_expanded(NodeId node_id) const = 0;
+  virtual ~Scheduler() = default;
 };
 #endif

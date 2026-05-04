@@ -1,8 +1,11 @@
 #include "main_engine.h"
+#include "build_tree.h"
 #include "configuration.h"
+#include "datapoint.h"
 #include "intersection.h"
 #include "misclassified_datapoints.h"
 #include "node.h"
+#include "node_expansion_scheduler_simple.h"
 #include <cassert>
 #include <cmath>
 Solver::Solver(Configuration configuration) {
@@ -22,39 +25,46 @@ Loss Solver::solve(MisclassifiedEntries &misclassified_datapoints, NodePtr tree,
   }
   return result;
 }
-
+Loss Solver::solve(Datapoints &datapoints, Depth depth) {
+  auto tree = TreeBuilder::build_tree(depth, 0);
+  SimpleScheduler scheduler(tree);
+  MisclassifiedEntries misclassified_datapoints;
+  return solve(misclassified_datapoints, tree, scheduler);
+}
 Loss Solver::solve_node(MisclassifiedEntries &misclassified_datapoints,
-                        NodePtr tree, Scheduler &node_expansion_schedule,
+                        NodePtr &tree, Scheduler &node_expansion_schedule,
                         FeatureId featureId) {
   assert(tree != nullptr);
   assert(featureId >= 0);
   assert(!node_expansion_schedule.all_nodes_expanded());
   assert(!node_expansion_schedule.get_expanded(tree->node_id));
-  tree->threshold.featureId = featureId;
-  auto &datapoints = tree->node_problem.datapoints;
+
+  auto &decisionData = std::get<DecisionData>(tree->data);
+  decisionData.threshold.featureId = featureId;
+  auto &datapoints = tree->datapoints;
   // std::sort(datapoints.begin(), datapoints.end(),
   //           [&](auto &a, auto &b) { a[featureId] <= b[featureId]; });
   Loss result = INFINITY;
 
   node_expansion_schedule.set_expanded(tree->node_id, true);
   for (auto &entry : datapoints) {
-    tree->threshold.threshold_value =
+    decisionData.threshold.threshold_value =
         // Its optimal to place thresholds in positions {x1 + dR, x2 + dR,...}.
         // Check my proof out.
         entry.feature_values[featureId] +
         this->configuration.perturbations_per_feature[featureId]
             .right_perturbation;
-    tree->left->node_problem.datapoints.clear();
-    tree->right->node_problem.datapoints.clear();
+    decisionData.left->datapoints.clear();
+    decisionData.right->datapoints.clear();
     for (auto &datapoint : datapoints) {
       auto intersection = Intersection::intersect_point_with_threshold(
-          tree->threshold, datapoint, this->configuration);
+          decisionData.threshold, datapoint, this->configuration);
       if (intersection.flows_to_left_subtree) {
-        tree->left->node_problem.datapoints.push_back(datapoint);
+        decisionData.left->datapoints.push_back(datapoint);
       }
 
       if (intersection.flows_to_right_subtree) {
-        tree->right->node_problem.datapoints.push_back(datapoint);
+        decisionData.right->datapoints.push_back(datapoint);
       }
     }
     auto next_node_to_expand = node_expansion_schedule.get_next_node();
@@ -68,19 +78,21 @@ Loss Solver::solve_node(MisclassifiedEntries &misclassified_datapoints,
 }
 
 Loss Solver::solve_leaf_node(MisclassifiedEntries &misclassified_datapoints,
-                             NodePtr tree, Scheduler &node_expansion_schedule) {
+                             NodePtr &tree,
+                             Scheduler &node_expansion_schedule) {
 
   assert(tree != nullptr);
-  assert(featureId >= 0);
   assert(!node_expansion_schedule.all_nodes_expanded());
   assert(!node_expansion_schedule.get_expanded(tree->node_id));
-  // PHASE 1, make decision and write down the consequences.
+  assert(tree->is_leaf());
 
+  auto &leafdata = std::get<LeafData>(tree->data);
+  // PHASE 1, make decision and write down the consequences.
   node_expansion_schedule.set_expanded(tree->node_id, true);
   Loss number_of_newly_misclassified = 0;
 
-  for (auto &entry : tree->node_problem.datapoints) {
-    if (entry.classification != tree->classification) {
+  for (auto &entry : tree->datapoints) {
+    if (entry.classification != leafdata.classification) {
       bool was_point_newly_misclassified =
           misclassified_datapoints.set_misclassified(entry.datapoint_id, true,
                                                      tree);
@@ -97,8 +109,8 @@ Loss Solver::solve_leaf_node(MisclassifiedEntries &misclassified_datapoints,
   // PHASE 2, undo what was done after backtracking!
   node_expansion_schedule.set_expanded(tree->node_id, false);
   // un-misclassify the points that were misclassified on this node.
-  for (auto &entry : tree->node_problem.datapoints) {
-    if (entry.classification != tree->classification) {
+  for (auto &entry : tree->datapoints) {
+    if (entry.classification != leafdata.classification) {
       bool was_point_newly_misclassified =
           misclassified_datapoints.set_misclassified(entry.datapoint_id, true,
                                                      tree);
