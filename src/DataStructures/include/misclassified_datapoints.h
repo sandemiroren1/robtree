@@ -10,7 +10,7 @@ using DataPointToMisclassifyingNode = std::map<DatapointId, NodePtr>;
 struct MisclassifiedEntries {
   DataPointToMisclassifyingNode entry_to_misclassifying_node;
   bool set_misclassified(DatapointId datapoint_id, bool misclassified,
-                         NodePtr tree);
+                         NodePtr node);
   Loss get_number_of_misclassified();
 };
 #endif

@@ -2,6 +2,7 @@
 #include "node.h"
 #include "node_expansion_scheduler_abstract_class.h"
 #include <cassert>
+#include <iostream>
 SimpleScheduler::SimpleScheduler(NodePtr tree) : Scheduler(tree) {
 
   NodePtrList schedule;
@@ -19,20 +20,33 @@ NodePtr SimpleScheduler::get_next_node() const {
   return node_to_return;
 }
 void SimpleScheduler::set_expanded(NodeId node_id, bool expansion_status) {
-
-  assert(this->index_of_next_node_in_schedule < this->schedule.size());
-  assert(node_id ==
-         this->schedule[this->index_of_next_node_in_schedule]->node_id);
-
+  // std::cout << "Expanding: " << node_id << " -> " << expansion_status;
+  // if (this->index_of_next_node_in_schedule != this->schedule.size()) {
+  //
+  //   std::cout << " next node to expand: "
+  //             <<
+  //             this->schedule[this->index_of_next_node_in_schedule]->node_id;
+  // } else {
+  //   std::cout << "should prpobably be unexpanding rn...";
+  // }
+  // std::cout << std::endl;
   if (expansion_status) {
-    this->index_of_next_node_in_schedule++;
+    assert(node_id ==
+           this->schedule[this->index_of_next_node_in_schedule]->node_id);
+    assert(this->index_of_next_node_in_schedule < this->schedule.size());
     assert(this->expanded_nodes.find(node_id) == this->expanded_nodes.end());
     this->expanded_nodes.insert(node_id);
+    this->index_of_next_node_in_schedule++; // This increment has to be done
+                                            // last
   } else {
-    this->index_of_next_node_in_schedule--;
-    assert(this->expanded_nodes.find(node_id) != this->expanded_nodes.end());
+    assert(index_of_next_node_in_schedule != 0); // This will cause a crash
+    this->index_of_next_node_in_schedule--; // We do this increment as now the
+                                            // index is pointing to the end
+    assert(this->expanded_nodes.find(node_id) !=
+           this->expanded_nodes.end()); // container contains the entry
     this->expanded_nodes.erase(node_id);
   }
+  // std::cout << "Expanded!" << std::endl;
 }
 bool SimpleScheduler::get_expanded(NodeId node_id) const {
   return this->expanded_nodes.find(node_id) != this->expanded_nodes.end();
