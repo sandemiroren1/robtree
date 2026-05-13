@@ -1,6 +1,5 @@
 #ifndef SIMPLE_NODE_SCHEDULER
 #define SIMPLE_NODE_SCHEDULER
-#include "node.h"
 #include "node_expansion_scheduler_abstract_class.h"
 #include <set>
 using NodePtrList = std::vector<NodePtr>;

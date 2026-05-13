@@ -15,7 +15,7 @@ struct DecisionData {
   Threshold threshold;
   NodePtr left, right;
   DecisionData(Threshold threshold, NodePtr left, NodePtr right)
-      : threshold(threshold), left(std::move(left)), right(std::move(right)) {};
+      : threshold(threshold), left((left)), right((right)) {};
 };
 struct Node {
   Node(NodeId node_id, Datapoints datapoints, Classification classification)

@@ -18,5 +18,8 @@ private:
                        NodePtr &tree, Scheduler &node_expansion_schedule);
   Loss solve_node(MisclassifiedEntries &misclassified_datapoints, NodePtr &tree,
                   Scheduler &node_expansion_schedule, FeatureId featureId);
+  void resolve_leaf_node(MisclassifiedEntries &misclassified_datapoints,
+                         NodePtr &tree, Scheduler &node_expansion_schedule,
+                         LeafData &leafdata);
 };
 #endif
