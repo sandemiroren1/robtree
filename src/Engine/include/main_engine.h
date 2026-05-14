@@ -2,6 +2,7 @@
 #define MAIN_ENGINE
 #include "common.h"
 #include "configuration.h"
+#include "datapoint.h"
 #include "misclassified_datapoints.h"
 #include "node_expansion_scheduler_abstract_class.h"
 #include "problem.h"
@@ -16,6 +17,9 @@ private:
              Scheduler &node_expansion_scheduler_abstract_class);
   Loss solve_leaf_node(MisclassifiedEntries &misclassified_datapoints,
                        NodePtr &tree, Scheduler &node_expansion_schedule);
+  Loss solve_leaf_node(MisclassifiedEntries &misclassified_datapoints,
+                       NodePtr &tree, Scheduler &node_expansion_schedule,
+                       Classification classification);
   Loss solve_node(MisclassifiedEntries &misclassified_datapoints, NodePtr &tree,
                   Scheduler &node_expansion_schedule, FeatureId featureId);
   void resolve_leaf_node(MisclassifiedEntries &misclassified_datapoints,

@@ -15,9 +15,6 @@ Loss Solver::solve(MisclassifiedEntries &misclassified_datapoints, NodePtr tree,
                    Scheduler &node_expansion_schedule) {
   assert(tree != nullptr);
 
-  if (tree->datapoints.empty()) {
-    return 0;
-  }
   if (tree->is_leaf()) {
     return solve_leaf_node(misclassified_datapoints, tree,
                            node_expansion_schedule);
@@ -35,12 +32,6 @@ Loss Solver::solve(Datapoints &datapoints, Depth depth) {
   SimpleScheduler scheduler(tree);
   MisclassifiedEntries misclassified_datapoints;
   tree->datapoints = datapoints;
-  size_t number_of_leafs = 1 << depth;
-  size_t number_of_leaf_configurations =
-      1 << number_of_leafs; // 2^d different binary labels to leafs.
-  // for (size_t i = 0; i < number_of_leaf_configurations; i++)
-  //   for (size_t j = 0; j < number_of_leafs; j++)
-  //     scheduler->[3 + j].classification = (i >> j) & 1;
   return solve(misclassified_datapoints, tree, scheduler);
 }
 Loss Solver::solve_node(MisclassifiedEntries &misclassified_datapoints,
@@ -51,25 +42,29 @@ Loss Solver::solve_node(MisclassifiedEntries &misclassified_datapoints,
   assert(!node_expansion_schedule.all_nodes_expanded());
   assert(!node_expansion_schedule.get_expanded(tree->node_id));
 
-  if (tree->datapoints.empty()) {
-    return 0;
-  }
   auto &decisionData = std::get<DecisionData>(tree->data);
   decisionData.threshold.featureId = featureId;
   auto &datapoints = tree->datapoints;
-  // std::sort(datapoints.begin(), datapoints.end(),
-  //           [&](auto &a, auto &b) { a[featureId] <= b[featureId]; });
   Loss result = Infinity;
 
   node_expansion_schedule.set_expanded(tree->node_id, true);
   auto next_node_to_expand = node_expansion_schedule.get_next_node();
+
+  if (tree->datapoints.empty()) {
+    Loss return_value = solve(misclassified_datapoints, next_node_to_expand,
+                              node_expansion_schedule);
+
+    node_expansion_schedule.set_expanded(tree->node_id, false);
+    return return_value;
+  }
   for (auto &entry : datapoints) {
     decisionData.threshold.threshold_value =
         // Its optimal to place thresholds in positions {x1 + dR, x2 + dR,...}.
         // Check my proof out.
         entry.feature_values[featureId] +
         this->configuration.perturbations_per_feature[featureId]
-            .right_perturbation;
+            .right_perturbation +
+        configuration.epsilons_per_feature[featureId].right_perturbation;
     decisionData.left->datapoints.clear();
     decisionData.right->datapoints.clear();
     for (auto &datapoint : datapoints) {
@@ -100,28 +95,36 @@ Loss Solver::solve_leaf_node(MisclassifiedEntries &misclassified_datapoints,
   assert(!node_expansion_schedule.all_nodes_expanded());
   assert(!node_expansion_schedule.get_expanded(tree->node_id));
   assert(tree->is_leaf());
+  Loss loss_true = solve_leaf_node(misclassified_datapoints, tree,
+                                   node_expansion_schedule, true);
+  Loss loss_false = solve_leaf_node(misclassified_datapoints, tree,
+                                    node_expansion_schedule, false);
+  return std::min(loss_true, loss_false);
+}
+Loss Solver::solve_leaf_node(MisclassifiedEntries &misclassified_datapoints,
+                             NodePtr &tree, Scheduler &node_expansion_schedule,
+                             Classification classification) {
 
-  if (tree->datapoints.empty()) {
-    return 0;
-  }
   auto &leafdata = std::get<LeafData>(tree->data);
+  leafdata.classification = classification;
   // PHASE 1, make decision and write down the consequences.
   node_expansion_schedule.set_expanded(tree->node_id, true);
-  Loss number_of_newly_misclassified = 0;
 
   for (auto &entry : tree->datapoints) {
     if (entry.classification != leafdata.classification) {
-      bool was_point_newly_misclassified =
-          misclassified_datapoints.set_misclassified(entry.datapoint_id, true,
-                                                     tree);
-      number_of_newly_misclassified += was_point_newly_misclassified;
+      misclassified_datapoints.set_misclassified(entry.datapoint_id, true,
+                                                 tree);
     }
   }
   if (node_expansion_schedule.all_nodes_expanded()) {
+    // cctd::cout << "\n=====================\n";
+    Loss return_value = misclassified_datapoints.get_number_of_misclassified();
 
+    // std::cout << *node_expansion_schedule.root << "\n"
+    //           << "Return val: " << return_value << "\n";
     this->resolve_leaf_node(misclassified_datapoints, tree,
                             node_expansion_schedule, leafdata);
-    return misclassified_datapoints.get_number_of_misclassified();
+    return return_value;
   }
   auto next_node_to_expand = node_expansion_schedule.get_next_node();
   Loss result = solve(misclassified_datapoints, next_node_to_expand,
@@ -141,8 +144,8 @@ void Solver::resolve_leaf_node(MisclassifiedEntries &misclassified_datapoints,
   for (auto &entry : tree->datapoints) {
     if (entry.classification != leafdata.classification) {
       bool was_point_newly_misclassified =
-          misclassified_datapoints.set_misclassified(entry.datapoint_id, true,
-                                                     tree);
+          misclassified_datapoints.is_datapoint_misclassified_at_node(
+              entry.datapoint_id, tree->node_id);
       if (was_point_newly_misclassified) {
         misclassified_datapoints.set_misclassified(entry.datapoint_id, false,
                                                    tree);

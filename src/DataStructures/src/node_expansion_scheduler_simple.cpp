@@ -4,6 +4,7 @@
 #include <cassert>
 #include <iostream>
 SimpleScheduler::SimpleScheduler(NodePtr tree) : Scheduler(tree) {
+  this->root = tree;
 
   NodePtrList schedule;
   dfs(tree, schedule);
