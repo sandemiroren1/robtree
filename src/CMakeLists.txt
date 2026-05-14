@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.9)
 project(RobTree)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -35,15 +35,6 @@ if (CMAKE_BUILD_TYPE STREQUAL Release)
 endif()
    
     
-
-# Gather source files
-file(GLOB SRC_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/DataStructures/src/*.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/Utilities/src/*.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/Engine/src/*.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
-)
-
 # Define include directories
 set(INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/Utilities/include
@@ -51,17 +42,34 @@ set(INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/Engine/include
 )
 
-# Specify include directories
 include_directories(${INCLUDE_DIRS})
 
-# Create the executable
-add_executable(RobTree ${SRC_FILES})
+# Shared library (all sources except main.cpp)
+file(GLOB LIB_SRC_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/DataStructures/src/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Utilities/src/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Engine/src/*.cpp
+)
+add_library(RobTreeLib STATIC ${LIB_SRC_FILES})
 
+# Main executable
+add_executable(RobTree ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
+target_link_libraries(RobTree RobTreeLib)
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  find_package(Catch2 3 REQUIRED)
+
+  file(GLOB TEST_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp)
+  add_executable(tests ${TEST_SRC_FILES})
+  target_link_libraries(tests PRIVATE RobTreeLib Catch2::Catch2WithMain)
+endif()
 # Set target properties based on build type
 if (CMAKE_BUILD_TYPE STREQUAL Release)        
     if( ipo_supported )
 	    message(STATUS "IPO / LTO enabled")    
+      set_property(TARGET RobTreeLib PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
       set_property(TARGET RobTree PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+      set_property(TARGET tests PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
     else()
          message(STATUS "IPO / LTO not supported: <${ipo_error}>")
     endif()
