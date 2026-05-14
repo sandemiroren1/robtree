@@ -9,6 +9,7 @@ code
 */build
 */.cache
 CLAUDE.md
+*.md
 # Ignore output files except for the placeholders
 out/*
 !out/figures/PLACEHOLDER.md
