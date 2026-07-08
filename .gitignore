@@ -24,3 +24,5 @@ dist/*
 roct.egg-info/*
 *.exe
 */__pycache__/*
+vcpkg_installed
+*/CMakeUserPresets.json
