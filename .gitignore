@@ -22,3 +22,5 @@ papers
 # Ignore distribution files for PyPi
 dist/*
 roct.egg-info/*
+*.exe
+*/__pycache__/*

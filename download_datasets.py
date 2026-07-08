@@ -23,5 +23,5 @@ for dataset in datasets:
     np.save(data_dir + f"X_train_{dataset}.npy", X_train, allow_pickle=False)
     np.save(data_dir + f"X_test_{dataset}.npy", X_test, allow_pickle=False)
 
-    np.save(data_dir + f"y_train_{dataset}.npy", y_train, allow_pickle=False)
-    np.save(data_dir + f"y_test_{dataset}.npy", y_test, allow_pickle=False)
+    np.save(data_dir + f"Y_train_{dataset}.npy", y_train, allow_pickle=False)
+    np.save(data_dir + f"Y_test_{dataset}.npy", y_test, allow_pickle=False)

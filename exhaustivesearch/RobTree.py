@@ -76,7 +76,7 @@ class OptimalRobustTreeSearch(BaseOptimalRobustTree):
         Construct the tree from the solver output.
         This method runs the solver and constructs the tree based on the output.
         """
-        binary_path = os.path.abspath("solver.exe")
+        binary_path = os.path.abspath("solvernewalg")
         input_path = os.path.abspath("exhaustivesearch/"+self.input_file_name)
         # Run the solver with the input file
         result = subprocess.run([binary_path, input_path], capture_output=True, text=True)
